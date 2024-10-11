@@ -1,7 +1,7 @@
 import pyodbc
 
 # Define the path to your .accdb file
-db_path = r"C:\Hackaton_October\main_data.accdb"
+db_path = r"C:\Hackaton_October\neclassic\main_data.accdb"
 
 
 # Create a connection string using the ODBC driver for Access

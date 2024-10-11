@@ -16,7 +16,7 @@ class ExcelSheetManager:
 
     def get_group_ids_from_sheet(self, sheet_name='Лист1'):
         """
-        Получает group_id из первого столбца листа Excel.
+        Получает group_id из первого столбца листа Excel, игнорируя пустые или None значения.
 
         :param sheet_name: Имя листа, из которого будут извлекаться данные. По умолчанию 'Лист1'.
         :return: Список значений group_id из первого столбца.
@@ -28,9 +28,10 @@ class ExcelSheetManager:
         # Инициализируем список для хранения group_id
         group_ids = []
 
-        # Читаем значения из первой колонки (колонка 'A')
+        # Читаем значения из первой колонки (колонка 'A'), исключая None
         for row in sheet.iter_rows(min_row=2, max_col=1, values_only=True):
-            group_ids.append(row[0])
+            if row[0] is not None:  # Проверяем, что значение не None
+                group_ids.append(row[0])
 
         return group_ids
 
@@ -51,6 +52,20 @@ class ExcelSheetManager:
 
         # Сохраняем изменения в файле
         workbook.save(self.filename)
+
+    def write_ids_to_sheet(self, group_id, ids):
+        """
+        Записывает айдишники в указанный лист Excel.
+
+        :param group_id: Имя листа, в который нужно записать данные.
+        :param ids: Список айдишников для записи.
+        """
+        workbook = openpyxl.load_workbook(self.filename)
+        sheet = workbook[str(group_id)]
+        for idx, item in enumerate(ids, start=1):
+            sheet.cell(row=idx, column=1, value=item)
+        workbook.save(self.filename)
+        print(f'{len(ids)} айдишников записано в лист {group_id}.')
 
     def process_excel_file(self):
         """
