@@ -7,7 +7,7 @@ class Singleton(object):
 
     def __new__(class_, *args, **kwargs):
         if not isinstance(class_._instance, class_):
-            class_._instance = object.__new__(class_, *args, **kwargs)
+            class_._instance = object.__new__(class_)
         return class_._instance
 
 
@@ -25,6 +25,7 @@ class PostgresRepository(Singleton):
         """
         # Генерируем динамический SQL для создания таблицы
         columns = ", ".join([f"{header} TEXT" for header in headers])
+
         query = sql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(
             sql.Identifier(f"table_{table_index}"),
             sql.SQL(columns)

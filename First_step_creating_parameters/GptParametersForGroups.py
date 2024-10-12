@@ -29,11 +29,19 @@ class GptCombinedProcessor:
         self.system_prompt_file_name = system_prompt_file_name
         self.basic_prompt_file_name = basic_prompt_file_name
         self.gpt_service = gpt_service if gpt_service else GptService()
+        db_config = {
+            'dbname': 'neclassic',
+            'user': 'neclassic',
+            'password': 'neclassic',
+            'host': 'localhost',
+            'port': 5434
+        }
 
+        self.repo = PostgresRepository(db_config)
 
     def get_headers(self, json_top_criteria: str):
-        table_headers = ['ID', 'Наименование', 'Маркировка', 'Регламенты (ГОСТ/ТУ)', 'Параметры', 'OKPD2_NAME',
-                         'ГОСТ Название']
+        table_headers = ['ID', 'Наименование', 'Маркировка', 'Регламенты_ГОСТ_ТУ', 'Параметры', 'OKPD2_NAME',
+                         'ГОСТ_Название']
 
         if '<top_criteria>' in json_top_criteria and '</top_criteria>' in json_top_criteria:
             start = json_top_criteria.find('<top_criteria>') + len('<top_criteria>')
@@ -49,7 +57,6 @@ class GptCombinedProcessor:
                 print("Ошибка при парсинге JSON:", e)
             return table_headers
 
-
     def process_combined_data(self):
         """
         Обрабатывает глобальный словарь параметров и частот,
@@ -59,7 +66,7 @@ class GptCombinedProcessor:
         :param data_strings: Словарь, где ключ — название листа, а значение — строка с данными первых 20 строк листа.
         """
         # Загружаем Excel-файл с возможностью записи
-        workbook = openpyxl.load_workbook(self.excel_filename)
+        workbook = openpyxl.load_workbook(self.excel_filename, read_only=True)
         try:
             excel_file_jsoner = ExcelJsonStat(workbook)
 
@@ -94,8 +101,7 @@ class GptCombinedProcessor:
                     if not parsed_result:
                         parsed_result = "Неизвестно"
 
-                self.get_headers(parsed_result)
-                # self.repo.create_table(group_id, self.get_headers(parsed_result))
+                self.repo.create_table(group_id, self.get_headers(parsed_result))
 
             print("Все словари успешно обработаны и сохранены.")
 

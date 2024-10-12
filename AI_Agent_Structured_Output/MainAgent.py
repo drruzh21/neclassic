@@ -1,11 +1,11 @@
+from operator import index
+
 from openai import OpenAI
 
 from AI_Agent_Structured_Output.AbstractStructure import AbstractStructure
 from AI_Agent_Structured_Output.Structures.WarCrimes import ProductCriteria14
 from First_step_creating_parameters.Prompt_loader import PromptLoader
 from repository.PostgresRepository import PostgresRepository
-
-from repository.SaveData import save_data
 
 
 class AiAgentStructuredOutput:
@@ -17,15 +17,15 @@ class AiAgentStructuredOutput:
             'host': 'localhost',
             'port': 5434
         }
-
         self.repo = PostgresRepository(db_config)
-    def structured_output_agent(self, data: list[list[str]], criteria: AbstractStructure):
+
+    def structured_output_agent(self, data_batch: list[list[str]], criteria: AbstractStructure):
         # Подготовка данных для structured output агента
         prompt_loader = PromptLoader()
         system_prompt = prompt_loader.load_prompt("system_prompt_struct_output")
 
         final_data = []
-        for product_data in data:
+        for product_data in data_batch:
             messages = f"""
             Here is the data that you need to analyze:
             <product_description>
@@ -57,18 +57,20 @@ class AiAgentStructuredOutput:
             print(data_to_save)
             print('\n\n==')
 
-        save_data(final_data)  # Сохраняем квалификацию в стейте
+        self.repo.insert_data(table_index=int(data_batch[0][0]), data_batch=final_data)
         print("Data has been saved to sql database:")
         print(final_data)
 
 
 if __name__ == "__main__":
-    data_to_gpt = [["14", "2317220161", "КРАСКА ДЕКОРАТИВНАЯ ПОД ДЕРЕВО", "KAOWA SEMENTOL", "Неизвестно", "750МЛ ОРЕХ", "Материалы лакокрасочные для нанесения покрытий прочие", "Неизвестно"],
-                   ["14", "2317220162", "КРАСКА ДЕКОРАТИВНАЯ ПОД ДЕРЕВО", "KAOWA SEMENTOL", "Неизвестно", "250МЛ ОРЕХ", "Материалы лакокрасочные для нанесения покрытий прочие", "Неизвестно"],
-                   ["14", "2317220163", "КРАСКА ДЕКОРАТИВНАЯ ПОД ДЕРЕВО", "KAOWA SEMENTOL", "Неизвестно", "500МЛ ОРЕХ", "Материалы лакокрасочные для нанесения покрытий прочие", "Неизвестно"]]
+    data_to_gpt = [["14", "2317220161", "КРАСКА ДЕКОРАТИВНАЯ ПОД ДЕРЕВО", "KAOWA SEMENTOL", "Неизвестно", "750МЛ ОРЕХ",
+                    "Материалы лакокрасочные для нанесения покрытий прочие", "Неизвестно"],
+                   ["14", "2317220162", "КРАСКА ДЕКОРАТИВНАЯ ПОД ДЕРЕВО", "KAOWA SEMENTOL", "Неизвестно", "250МЛ ОРЕХ",
+                    "Материалы лакокрасочные для нанесения покрытий прочие", "Неизвестно"],
+                   ["14", "2317220163", "КРАСКА ДЕКОРАТИВНАЯ ПОД ДЕРЕВО", "KAOWA SEMENTOL", "Неизвестно", "500МЛ ОРЕХ",
+                    "Материалы лакокрасочные для нанесения покрытий прочие", "Неизвестно"]]
 
     agent = AiAgentStructuredOutput()
-
     criteria_ = ProductCriteria14()
 
     x = agent.structured_output_agent(data_to_gpt, criteria_)
