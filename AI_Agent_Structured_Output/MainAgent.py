@@ -3,11 +3,22 @@ from openai import OpenAI
 from AI_Agent_Structured_Output.AbstractStructure import AbstractStructure
 from AI_Agent_Structured_Output.Structures.WarCrimes import ProductCriteria14
 from First_step_creating_parameters.Prompt_loader import PromptLoader
+from repository.PostgresRepository import PostgresRepository
 
 from repository.SaveData import save_data
 
 
 class AiAgentStructuredOutput:
+    def __init__(self):
+        db_config = {
+            'dbname': 'neclassic',
+            'user': 'neclassic',
+            'password': 'neclassic',
+            'host': 'localhost',
+            'port': 5434
+        }
+
+        self.repo = PostgresRepository(db_config)
     def structured_output_agent(self, data: list[list[str]], criteria: AbstractStructure):
         # Подготовка данных для structured output агента
         prompt_loader = PromptLoader()

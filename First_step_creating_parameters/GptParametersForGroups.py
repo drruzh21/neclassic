@@ -1,8 +1,11 @@
+import json
+
 import openpyxl
 from First_step_creating_parameters.Excel_can_crawl_lists import ExcelSheetManager
 from First_step_creating_parameters.Excel_json_stat import ExcelJsonStat
 from First_step_creating_parameters.First_GPT_Agent import GptService
 from json_handler import StringHandler
+from repository.PostgresRepository import PostgresRepository
 
 
 class GptCombinedProcessor:
@@ -27,6 +30,26 @@ class GptCombinedProcessor:
         self.basic_prompt_file_name = basic_prompt_file_name
         self.gpt_service = gpt_service if gpt_service else GptService()
 
+
+    def get_headers(self, json_top_criteria: str):
+        table_headers = ['ID', 'Наименование', 'Маркировка', 'Регламенты (ГОСТ/ТУ)', 'Параметры', 'OKPD2_NAME',
+                         'ГОСТ Название']
+
+        if '<top_criteria>' in json_top_criteria and '</top_criteria>' in json_top_criteria:
+            start = json_top_criteria.find('<top_criteria>') + len('<top_criteria>')
+            end = json_top_criteria.find('</top_criteria>')
+            json_str = json_top_criteria[start:end].strip()
+            try:
+                json_data = json.loads(json_str)
+                top_criteria_values = json_data.get("top_criteria", [])
+                if len(top_criteria_values) > 0:
+                    for item in top_criteria_values:
+                        table_headers.append(item)
+            except json.JSONDecodeError as e:
+                print("Ошибка при парсинге JSON:", e)
+            return table_headers
+
+
     def process_combined_data(self):
         """
         Обрабатывает глобальный словарь параметров и частот,
@@ -45,9 +68,6 @@ class GptCombinedProcessor:
             print(f"Получено {len(group_ids)} group_id из Excel.")
 
             for group_id in group_ids:
-                sheet_name = str(group_id)
-
-                # Преобразуем глобальный словарь в строку
                 data_strings = excel_file_jsoner.get_jsons_from_sheet(group_id)
                 data_dict = excel_file_jsoner.get_sheet_stat(group_id)
 
@@ -56,26 +76,8 @@ class GptCombinedProcessor:
                 data_dict_string = self.convert_dict_to_string(data_dict)
                 print(f"Преобразованный глобальный словарь в строку: {data_dict_string}")
 
-                if sheet_name not in workbook.sheetnames:
-                    print(f"Лист '{sheet_name}' не найден в Excel-файле. Пропускаем.")
-                    continue
-
-                sheet = workbook[sheet_name]
-                print(f"Обрабатываем лист: {sheet_name}")
-
-                # Добавляем заголовок в столбец J, если его нет
-                header_J = sheet.cell(row=1, column=10)  # Столбец J
-                if header_J.value != "GPT Анализ":
-                    header_J.value = "GPT Анализ"
-                    print(f"Заголовок столбца J добавлен на листе '{sheet_name}'.")
-
-                if not data_strings:
-                    print(f"Данные из первых 20 строк для листа '{sheet_name}' отсутствуют. Используем только data_dict.")
-                    combined_input = data_strings
-                else:
-                    # Объединяем data_dict и data_string
-                    combined_input = f"<parameters_frequency>{data_dict_string}</parameters_frequency>\n\nДанные первых 20 строк листа '{sheet_name}':\n<first_20_rows>{data_strings}</first_20_rows>"
-                    print(f"Объединенные данные для листа '{sheet_name}': {combined_input}")
+                # Объединяем data_dict и data_string
+                combined_input = f"<parameters_frequency>{data_dict_string}</parameters_frequency>\n\nДанные первых 20 строк группы '{group_id}':\n<first_20_rows>{data_strings}</first_20_rows>"
 
                 # Передаём объединённую строку в GPT
                 try:
@@ -85,7 +87,6 @@ class GptCombinedProcessor:
                         basic_prompt_file_name=self.basic_prompt_file_name
                     )
                 except Exception as gpt_error:
-                    print(f"Ошибка при обращении к GPT для листа '{sheet_name}': {gpt_error}")
                     parsed_result = "Ошибка GPT"
                 else:
                     # Получаем parsed_result, если он есть
@@ -93,18 +94,9 @@ class GptCombinedProcessor:
                     if not parsed_result:
                         parsed_result = "Неизвестно"
 
-                # Записываем parsed_result в ячейку J2
-                sheet.cell(row=2, column=10, value=parsed_result)
+                self.get_headers(parsed_result)
+                # self.repo.create_table(group_id, self.get_headers(parsed_result))
 
-                # Выводим результат в консоль (опционально)
-                print(f"Лист: {sheet_name}, GPT Result: {parsed_result}, Token Usage: {result.get('token_usage', 'N/A')}")
-
-                # Сохраняем файл после вставки значения
-            try:
-                workbook.save(self.excel_filename) # ВОТ ЗДЕСЬ
-                print(f"Записан результат GPT на листы в ячейку J2. Файл сохранён.")
-            except Exception as save_error:
-                print(f"Ошибка при сохранении файла для листа {save_error}")
             print("Все словари успешно обработаны и сохранены.")
 
         except Exception as e:
