@@ -5,7 +5,7 @@ import random
 from First_step_creating_parameters.Excel_can_crawl_lists import ExcelSheetManager
 
 
-class DatabaseHandler:
+class ExcelRandomId:
     """
     Класс для работы с базой данных Access и выбора случайных айдишников по ОКПД2.
     """
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     excel_filename = 'main_data.xlsx'
 
     # Создаем объект класса DatabaseHandler
-    db_handler = DatabaseHandler(db_path, excel_filename)
+    db_handler = ExcelRandomId(db_path, excel_filename)
 
     # Запускаем процесс
     db_handler.process_group_ids()

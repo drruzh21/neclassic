@@ -55,15 +55,22 @@ class ExcelSheetManager:
 
     def write_ids_to_sheet(self, group_id, ids):
         """
-        Записывает айдишники в указанный лист Excel.
+        Записывает айдишники в указанный лист Excel. Добавляет заголовок 'ID', если его нет.
 
         :param group_id: Имя листа, в который нужно записать данные.
         :param ids: Список айдишников для записи.
         """
         workbook = openpyxl.load_workbook(self.filename)
         sheet = workbook[str(group_id)]
-        for idx, item in enumerate(ids, start=1):
+
+        # Проверяем наличие заголовка в первой строке и первом столбце
+        if sheet.cell(row=1, column=1).value != "ID":
+            sheet.cell(row=1, column=1, value="ID")
+
+        # Записываем айдишники, начиная со второй строки, так как первая строка — это заголовок
+        for idx, item in enumerate(ids, start=2):
             sheet.cell(row=idx, column=1, value=item)
+
         workbook.save(self.filename)
         print(f'{len(ids)} айдишников записано в лист {group_id}.')
 

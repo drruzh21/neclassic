@@ -1,12 +1,13 @@
 import openpyxl
 import pyodbc
-
+from openpyxl.utils import get_column_letter
+from collections import defaultdict
 from First_step_creating_parameters.Excel_can_crawl_lists import ExcelSheetManager
 
 
-class DatabaseHandler:
+class ExcelGatherDataOptimized:
     """
-    Класс для работы с базой данных Access, соединения таблиц и записи данных в Excel.
+    Оптимизированный класс для работы с базой данных Access, объединения таблиц и записи данных в Excel.
     """
 
     def __init__(self, db_path, excel_filename):
@@ -18,23 +19,38 @@ class DatabaseHandler:
         """
         self.db_path = db_path
         self.excel_manager = ExcelSheetManager(excel_filename)
+        self.conn = self.connect_to_db()
+        self.data_mapping = defaultdict(lambda: [""] * 10)  # Инициализируем словарь с пустыми значениями
 
-    def get_joined_data(self, group_id):
+    def connect_to_db(self):
         """
-        Извлекает данные из таблиц MTR, OKPD_2 и GOST с использованием SQL JOIN.
+        Устанавливает соединение с базой данных Access.
 
-        :param group_id: Первые две цифры ОКПД2 для фильтрации.
-        :return: Список данных, объединяющий информацию из таблиц MTR, OKPD_2 и GOST.
+        :return: Объект соединения.
         """
         conn_str = (
-                r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
-                r'DBQ=' + self.db_path + ';'
+            r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
+            r'DBQ=' + self.db_path + ';'
         )
-        conn = pyodbc.connect(conn_str)
-        cursor = conn.cursor()
+        try:
+            conn = pyodbc.connect(conn_str)
+            print("Соединение с базой данных успешно установлено.")
+            return conn
+        except pyodbc.Error as e:
+            print("Ошибка соединения с базой данных:", e)
+            raise
 
-        # Обновленный SQL-запрос с корректной структурой
-        query = f"""
+    def load_all_data(self, group_ids):
+        """
+        Загружает все необходимые данные из базы данных и заполняет локальный словарь.
+
+        :param group_ids: Список двухзначных group_id из Excel.
+        """
+        cursor = self.conn.cursor()
+
+        # Создаем строку с параметрами для SQL IN
+        placeholders = ','.join(['?'] * len(group_ids))
+        sql_query = f"""
             SELECT 
                 MTR.[код СКМТР], 
                 MTR.[Наименование], 
@@ -50,66 +66,122 @@ class DatabaseHandler:
             FROM (MTR
             LEFT JOIN OKPD_2 ON MTR.ОКПД2 = OKPD_2.OKPD2)
             LEFT JOIN GOST ON MTR.[Регламенты (ГОСТ/ТУ)] = GOST.[GOST#Gost_code]
-            WHERE LEFT(MTR.ОКПД2, 2) = ?
+            WHERE LEFT(MTR.ОКПД2, 2) IN ({placeholders})
         """
 
-        cursor.execute(query, (group_id,))
-        rows = cursor.fetchall()
+        try:
+            print("Загрузка данных из базы данных...")
+            cursor.execute(sql_query, tuple(group_ids))
+            rows = cursor.fetchall()
+            print(f"Загружено {len(rows)} записей из базы данных.")
 
-        cursor.close()
-        conn.close()
+            for row in rows:
+                # row содержит:
+                # (код СКМТР, Наименование, Маркировка, Регламенты (ГОСТ/ТУ),
+                # Параметры, Базисная Единица измерения, OKPD2_NAME,
+                # Gost_title, Gost_status, Gost_data_start, Gost_data_end)
+                id_value = str(row[0]).strip()  # Код СКМТР должен быть строкой
+                if not id_value:
+                    continue  # Пропускаем пустые ID
 
-        return rows
+                # Пропускаем код СКМТР, так как он используется как ключ
+                data_to_store = list(row[1:])  # Срезаем первый элемент
 
-    def write_data_to_excel(self, group_id, data):
+                # Обрабатываем возможные пустые значения и типы данных
+                processed_data = []
+                for value in data_to_store:
+                    if isinstance(value, str):
+                        processed_data.append(value.strip())
+                    elif isinstance(value, (pyodbc.Timestamp, pyodbc.Date)):
+                        processed_data.append(value.strftime('%Y-%m-%d'))
+                    else:
+                        processed_data.append(value if value is not None else "")
+
+                # Записываем данные в словарь
+                self.data_mapping[id_value] = processed_data
+
+        except pyodbc.Error as e:
+            print("Ошибка при выполнении SQL-запроса:", e)
+            raise
+        finally:
+            cursor.close()
+
+    def write_data_to_sheet(self, sheet, id_column='A', start_row=2):
         """
-        Записывает данные в соответствующий лист Excel.
+        Записывает данные в соответствующие ячейки листа Excel.
 
-        :param group_id: Идентификатор группы (лист Excel).
-        :param data: Данные для записи.
+        :param sheet: Объект листа Excel.
+        :param id_column: Буква столбца, где находятся ID.
+        :param start_row: Номер строки, с которой начинаются данные.
         """
-        workbook = openpyxl.load_workbook(self.excel_manager.filename)
+        # Заголовки, начиная со второго столбца
+        headers = [
+            "Наименование", "Маркировка", "Регламенты (ГОСТ/ТУ)",
+            "Параметры", "Базисная Единица измерения", "OKPD2_NAME",
+            "ГОСТ Название", "ГОСТ Статус", "ГОСТ Дата начала", "ГОСТ Дата окончания"
+        ]
 
-        if str(group_id) in workbook.sheetnames:
-            sheet = workbook[str(group_id)]
+        # Проверяем, есть ли уже заголовки (допустим, что заголовки начинаются со второго столбца)
+        existing_headers = [cell.value for cell in sheet[1][1:11]]  # Проверяем первые 10 столбцов после ID
+
+        if not any(existing_headers):
+            # Добавляем заголовки, если они отсутствуют
+            for col_num, header in enumerate(headers, start=2):
+                sheet.cell(row=1, column=col_num, value=header)
+            print(f"Заголовки добавлены на лист '{sheet.title}'.")
         else:
-            # Создаем лист, если его нет
-            sheet = workbook.create_sheet(title=str(group_id))
+            print(f"Заголовки уже существуют на листе '{sheet.title}'. Пропускаем добавление заголовков.")
 
-        # Добавляем заголовки, если они отсутствуют
-        if sheet.max_row == 1:
-            headers = [
-                "Код СКМТР", "Наименование", "Маркировка", "Регламенты (ГОСТ/ТУ)",
-                "Параметры", "Базисная Единица измерения", "OKPD2_NAME",
-                "ГОСТ Название", "ГОСТ Статус", "ГОСТ Дата начала", "ГОСТ Дата окончания"
-            ]
-            sheet.append(headers)
+        # Проходимся по всем строкам с ID
+        for row in range(start_row, sheet.max_row + 1):
+            id_cell = sheet[f"{id_column}{row}"]
+            id_value = str(id_cell.value).strip() if id_cell.value is not None else ""
+            if not id_value:
+                continue  # Пропускаем пустые ячейки
 
-        # Записываем данные в лист
-        for row in data:
-            # Заменяем None на пустую строку
-            row = [val if val is not None else "" for val in row]
-            sheet.append(row)
+            # Получаем данные из словаря
+            data = self.data_mapping.get(id_value, [""] * 10)
 
-        # Сохраняем файл
-        workbook.save(self.excel_manager.filename)
-        print(f"Данные для group_id {group_id} записаны в файл.")
+            # Записываем данные, начиная со второго столбца
+            for col_offset, value in enumerate(data, start=2):
+                sheet.cell(row=row, column=col_offset, value=value)
 
     def process_group_ids(self):
         """
         Основная функция, которая обрабатывает все group_id и записывает объединенные данные в Excel.
         """
-        # Получаем список всех group_id из Excel
-        group_ids = self.excel_manager.get_group_ids_from_sheet()
+        try:
+            # Получаем список всех group_id из Excel
+            group_ids = self.excel_manager.get_group_ids_from_sheet()
+            print(f"Получено {len(group_ids)} group_id из Excel.")
 
-        for group_id in group_ids:
-            # Извлекаем объединенные данные для текущего group_id
-            data = self.get_joined_data(group_id)
-            if data:
-                # Записываем данные в соответствующий лист Excel
-                self.write_data_to_excel(group_id, data)
-            else:
-                print(f"Нет данных для group_id {group_id}.")
+            # Загрузка всех данных из базы данных за один запрос
+            self.load_all_data(group_ids)
+
+            # Загружаем Excel-файл
+            workbook = openpyxl.load_workbook(self.excel_manager.filename)
+
+            for group_id in group_ids:
+                sheet_name = str(group_id)
+                if sheet_name not in workbook.sheetnames:
+                    print(f"Лист '{sheet_name}' не найден в Excel-файле. Пропускаем.")
+                    continue
+
+                sheet = workbook[sheet_name]
+                print(f"Обрабатываем лист: {sheet_name}")
+
+                # Записываем данные в лист
+                self.write_data_to_sheet(sheet)
+
+                # Сохраняем файл после обработки каждого листа
+                workbook.save(self.excel_manager.filename)
+                print(f"Лист '{sheet_name}' успешно обновлён и сохранён.")
+
+        except Exception as e:
+            print("Произошла ошибка при обработке данных:", e)
+        finally:
+            self.conn.close()
+            print("Соединение с базой данных закрыто.")
 
 
 # Пример использования
@@ -117,8 +189,8 @@ if __name__ == "__main__":
     db_path = r"C:\Hackaton_October\neclassic\main_data.accdb"
     excel_filename = 'main_data.xlsx'
 
-    # Создаем объект класса DatabaseHandler
-    db_handler = DatabaseHandler(db_path, excel_filename)
+    # Создаем объект класса ExcelGatherDataOptimized
+    db_handler = ExcelGatherDataOptimized(db_path, excel_filename)
 
     # Запускаем процесс обработки данных
     db_handler.process_group_ids()
