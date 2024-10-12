@@ -10,9 +10,6 @@ from AI_Agent_Structured_Output.Structures.WarCrimes import ProductCriteria14, P
     ProductCriteria19, ProductCriteria01
 from First_step_creating_parameters.Excel_can_crawl_lists import ExcelSheetManager
 
-# Предполагается, что классы ProductCriteriaXX и AiAgentStructuredOutput уже импортированы
-# from your_module import ProductCriteria14, ProductCriteria27, ..., AiAgentStructuredOutput
-
 # Определяем словарь соответствия названий листов и классов критериев
 product_criteria_dict = {
     "14": ProductCriteria14(),
@@ -57,7 +54,14 @@ class ExcelBatchProcessor:
         self.filename = filename
         self.batch_size = batch_size
         self.manager = ExcelSheetManager(filename)
-        self.workbook = openpyxl.load_workbook(self.filename, data_only=True)
+        try:
+            self.workbook = openpyxl.load_workbook(self.filename, data_only=True)
+        except FileNotFoundError:
+            print(f"Файл {self.filename} не найден.")
+            exit(1)
+        except Exception as e:
+            print(f"Ошибка при загрузке файла {self.filename}: {e}")
+            exit(1)
         self.agent = AiAgentStructuredOutput()
 
     def collect_data_per_sheet(self, sheet_name: str) -> List[List[str]]:
@@ -139,8 +143,10 @@ class ExcelBatchProcessor:
         for sheet_name, batches in all_batches.items():
             criteria = product_criteria_dict[sheet_name]
             for idx, batch in enumerate(batches, start=1):
+                # Удаляем первый элемент (название листа) из каждого массива данных в батче
+                modified_batch = [item[1:] for item in batch]
                 print(f'Отправка батча {idx} из листа {sheet_name} в агента...')
-                self.agent.structured_output_agent(batch, criteria)
+                self.agent.structured_output_agent(modified_batch, criteria, sheet_name)
                 print(f'Батч {idx} из листа {sheet_name} обработан.\n')
 
     def send_single_batch_to_agent(self, sheet_name: str, batch_index: int):
@@ -166,13 +172,17 @@ class ExcelBatchProcessor:
 
         criteria = product_criteria_dict[sheet_name]
         batch = batches[batch_index - 1]
+
+        # Удаляем первый элемент (название листа) из каждого массива данных в батче
+        modified_batch = [item[1:] for item in batch]
+
         print(f'Отправка батча {batch_index} из листа {sheet_name} в агента...')
-        self.agent.structured_output_agent(batch, criteria)
+        self.agent.structured_output_agent(modified_batch, criteria)
         print(f'Батч {batch_index} из листа {sheet_name} обработан.\n')
 
 
 if __name__ == "__main__":
-    # Укажите имя вашего файла Excel
+    # Укажите путь к вашему файлу Excel
     filename = 'C:/Hackaton_October/neclassic/main_data_with_analysis.xlsx'
 
     # Создаем объект класса ExcelBatchProcessor с размером батча 20
@@ -217,4 +227,3 @@ if __name__ == "__main__":
         else:
             print(
                 "Неверный ввод. Пожалуйста, выберите 'a' для отправки всех батчей, 'o' для отправки одного батча или 'q' для выхода.")
-

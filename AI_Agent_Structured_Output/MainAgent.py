@@ -19,7 +19,7 @@ class AiAgentStructuredOutput:
         }
         self.repo = PostgresRepository(db_config)
 
-    def structured_output_agent(self, data_batch: list[list[str]], criteria: AbstractStructure):
+    def structured_output_agent(self, data_batch: list[list[str]], criteria: AbstractStructure, sheet_name: str):
         # Подготовка данных для structured output агента
         prompt_loader = PromptLoader()
         system_prompt = prompt_loader.load_prompt("system_prompt_struct_output")
@@ -57,7 +57,7 @@ class AiAgentStructuredOutput:
             print(data_to_save)
             print('\n\n==')
 
-        self.repo.insert_data(table_index=int(data_batch[0][0]), data_batch=final_data)
+        self.repo.insert_data(table_index=int(sheet_name), data_batch=final_data)
         print("Data has been saved to sql database:")
         print(final_data)
 
