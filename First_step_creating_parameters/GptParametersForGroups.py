@@ -1,6 +1,8 @@
 import openpyxl
 from First_step_creating_parameters.Excel_can_crawl_lists import ExcelSheetManager
+from First_step_creating_parameters.Excel_json_stat import ExcelJsonStat
 from First_step_creating_parameters.First_GPT_Agent import GptService
+from json_handler import StringHandler
 
 
 class GptCombinedProcessor:
@@ -25,7 +27,7 @@ class GptCombinedProcessor:
         self.basic_prompt_file_name = basic_prompt_file_name
         self.gpt_service = gpt_service if gpt_service else GptService()
 
-    def process_combined_data(self, data_dict, data_strings):
+    def process_combined_data(self):
         """
         Обрабатывает глобальный словарь параметров и частот,
         объединяет его с данными строк, передаёт в GPT и записывает результат в столбец J каждого листа.
@@ -33,13 +35,10 @@ class GptCombinedProcessor:
         :param data_dict: Глобальный словарь с параметрами и их частотами.
         :param data_strings: Словарь, где ключ — название листа, а значение — строка с данными первых 20 строк листа.
         """
+        # Загружаем Excel-файл с возможностью записи
+        workbook = openpyxl.load_workbook(self.excel_filename)
         try:
-            # Загружаем Excel-файл с возможностью записи
-            workbook = openpyxl.load_workbook(self.excel_filename)
-
-            # Преобразуем глобальный словарь в строку
-            data_dict_string = self.convert_dict_to_string(data_dict)
-            print(f"Преобразованный глобальный словарь в строку: {data_dict_string}")
+            excel_file_jsoner = ExcelJsonStat(workbook)
 
             # Получаем список всех group_id из Excel (предполагается, что они соответствуют названиям листов)
             group_ids = self.excel_manager.get_group_ids_from_sheet()
@@ -47,6 +46,16 @@ class GptCombinedProcessor:
 
             for group_id in group_ids:
                 sheet_name = str(group_id)
+
+                # Преобразуем глобальный словарь в строку
+                data_strings = excel_file_jsoner.get_jsons_from_sheet(group_id)
+                data_dict = excel_file_jsoner.get_sheet_stat(group_id)
+
+                data_strings = ' , '.join(data_strings)
+
+                data_dict_string = self.convert_dict_to_string(data_dict)
+                print(f"Преобразованный глобальный словарь в строку: {data_dict_string}")
+
                 if sheet_name not in workbook.sheetnames:
                     print(f"Лист '{sheet_name}' не найден в Excel-файле. Пропускаем.")
                     continue
@@ -60,14 +69,12 @@ class GptCombinedProcessor:
                     header_J.value = "GPT Анализ"
                     print(f"Заголовок столбца J добавлен на листе '{sheet_name}'.")
 
-                # Получаем строку данных из первых 20 строк листа
-                data_string = data_strings.get(sheet_name, "")
-                if not data_string:
+                if not data_strings:
                     print(f"Данные из первых 20 строк для листа '{sheet_name}' отсутствуют. Используем только data_dict.")
-                    combined_input = data_dict_string
+                    combined_input = data_strings
                 else:
                     # Объединяем data_dict и data_string
-                    combined_input = f"{data_dict_string}\nДанные первых 20 строк листа '{sheet_name}':\n{data_string}"
+                    combined_input = f"<parameters_frequency>{data_dict_string}</parameters_frequency>\n\nДанные первых 20 строк листа '{sheet_name}':\n<first_20_rows>{data_strings}</first_20_rows>"
                     print(f"Объединенные данные для листа '{sheet_name}': {combined_input}")
 
                 # Передаём объединённую строку в GPT
@@ -89,20 +96,19 @@ class GptCombinedProcessor:
                 # Записываем parsed_result в ячейку J2
                 sheet.cell(row=2, column=10, value=parsed_result)
 
-                # Сохраняем файл после вставки значения
-                try:
-                    workbook.save(self.excel_filename)
-                    print(f"Записан результат GPT на лист '{sheet_name}' в ячейку J2. Файл сохранён.")
-                except Exception as save_error:
-                    print(f"Ошибка при сохранении файла для листа '{sheet_name}': {save_error}")
-                    continue
-
                 # Выводим результат в консоль (опционально)
                 print(f"Лист: {sheet_name}, GPT Result: {parsed_result}, Token Usage: {result.get('token_usage', 'N/A')}")
 
+                # Сохраняем файл после вставки значения
+            try:
+                workbook.save(self.excel_filename)
+                print(f"Записан результат GPT на листы в ячейку J2. Файл сохранён.")
+            except Exception as save_error:
+                print(f"Ошибка при сохранении файла для листа {save_error}")
             print("Все словари успешно обработаны и сохранены.")
 
         except Exception as e:
+            workbook.save(self.excel_filename)
             print("Произошла ошибка при обработке словарей:", e)
 
     @staticmethod
@@ -133,23 +139,5 @@ if __name__ == "__main__":
         gpt_service=gpt_service
     )
 
-    # Пример глобального словаря для обработки
-    data_dict = {
-        "volume": 111,
-        "color": 13,
-        "completeness": 168,
-        "category": 469,
-        "signs_of_difference": 3
-        # Добавьте другие параметры по необходимости
-    }
-
-    # Пример словаря с данными первых 20 строк для каждого листа
-    # Формат: {"14": "ID\tНаименование\tМаркировка\tРегламенты (ГОСТ/ТУ)\tПараметры\tOKPD2_NAME\tГОСТ Название\n8559230749\t...", ...}
-    data_strings = {
-        "14": """ID\tНаименование\tМаркировка\tРегламенты (ГОСТ/ТУ)\tПараметры\tOKPD2_NAME\tГОСТ Название
-8559230749\tСОРОЧКА МУЖСКАЯ ФОРМЕННАЯ ПОВСЕДНЕВНАЯ С КОРОТКИМИ РУКАВАМИ ДЛЯ НАЧАЛЬНИКОВ ПОЕЗДОВ, ПРОВОДНИКОВ И КАССИРОВ\tТИП Г\tТУ 14.14.21-010-94154560-2021\t124-126-188 БЕЛАЯ В КОРИЧНЕВО-КРАСНУЮ ПОЛОСКУ (5-АЯ ПОЛНОТНАЯ ГРУППА), СРЕДНЯЯ КАТЕГОРИЯ ДОЛЖНОСТИ, 2 ГАЛУНА 3 ЗВЕЗДЫ\tХалаты, фартуки, жилеты и сорочки мужские производственные и профессиональные\t""",
-        # Добавьте другие листы и их данные по аналогии
-    }
-
     # Запускаем процесс обработки данных
-    processor.process_combined_data(data_dict, data_strings)
+    processor.process_combined_data()

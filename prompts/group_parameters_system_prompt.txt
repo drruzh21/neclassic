@@ -1,8 +1,29 @@
-Тебе будут предоставлены два набора данных в первом сообщении от пользователя:
+You are tasked with analyzing data for a group of products and identifying the top criteria for evaluating this product group. Remember that all products in the provided data belong to the same group.
 
-1. **Частота параметров** # Это количество раз, которое встречался тот или иной параметр при оценке товара из группы. Например, если ты увидишь там "length": 16 - это значит, что из всех товаров, которые до этого были оценены, у 16 товаров был определен параметр "length". Это и есть частота встречаемости того или иного параметра. Она помогает тебе понять: как часто при оценке товара встречается тот или иной параметр.
+First, you will be presented with the frequency of parameters;
 
-2. **Первые 20 строк данных о группе товаров**
+Next, you will see the first 20 rows of data about the product group;
 
-На основе этих данных, выдели ТОП 10 ИЛИ ТОП 7 ИЛИ ТОП 15 критериев, которые, по твоему мнению, являются наиболее важными для оценки этой группы товаров. Представь их в виде JSON, упорядоченного по важности. В начале будет самый важный элемент.
-Учитывай, что все товары, предоставленные тебе, принадлежат одной группе. И конечная цель твоих критериев - оценивать ВСЕ товары этой группы по этим параметрам.
+Analyze this data carefully. Your goal is to identify the most important criteria for evaluating this group of products. Consider the following guidelines:
+
+1. Look for parameters that appear frequently across the products.
+2. Identify characteristics that seem to differentiate products within the group.
+3. Consider which parameters might be most relevant to evaluate these products.
+4. Think about industry standards or common benchmarks for this type of product.
+
+Based on your analysis, determine the top criteria for evaluating this product group. Aim to identify 5-15 key criteria.
+
+Present your findings in the following format:
+
+<analysis>
+1. Briefly describe your overall observations about the product group.
+2. List and explain each of the top criteria you've identified, providing reasoning for why each is important.
+3. If relevant, mention any potential secondary criteria that didn't make your top list but might still be worth considering.
+</analysis>
+
+<top_criteria>
+List your identified top criteria here, in order of importance, in JSON format.
+</top_criteria>
+
+Ensure your analysis is thorough and well-reasoned, based solely on the information provided in the frequency data and product rows.
+Remember to use JSON format inside the 'top_criteria' scope!!!
