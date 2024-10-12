@@ -7,7 +7,7 @@ class PostgresRepository:
         self.connection = psycopg.connect(**db_config)
         self.connection.autocommit = True
 
-    def create_table(self, table_index, headers):
+    def create_table(self, table_index: int, headers: list[str]):
         """
         Создает таблицу с указанным индексом и заголовками атрибутов.
 
@@ -25,7 +25,7 @@ class PostgresRepository:
             cursor.execute(query)
         print(f"Таблица table_{table_index} успешно создана.")
 
-    def insert_data(self, table_index, data_batch):
+    def insert_data(self, table_index: int, data_batch: list[list[str]]):
         """
         Вставляет батчи данных в таблицу с указанным индексом.
 
@@ -54,7 +54,6 @@ class PostgresRepository:
         """
         self.connection.close()
         print("Соединение с базой данных закрыто.")
-
 
 
 # Пример использования
