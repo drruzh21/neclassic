@@ -101,7 +101,7 @@ class GptCombinedProcessor:
 
                 # Сохраняем файл после вставки значения
             try:
-                workbook.save(self.excel_filename)
+                workbook.save(self.excel_filename) # ВОТ ЗДЕСЬ
                 print(f"Записан результат GPT на листы в ячейку J2. Файл сохранён.")
             except Exception as save_error:
                 print(f"Ошибка при сохранении файла для листа {save_error}")

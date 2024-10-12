@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from openai import OpenAI, BaseModel
 from pydantic import Field
 from First_step_creating_parameters.Prompt_loader import PromptLoader
+from repository.GetHeaders import get_headers_from_excel
+from repository.SaveData import save_data
 
 load_dotenv()
 
@@ -66,21 +68,21 @@ def structured_output_agent(data: str):
 
         # Получаем извлеченную информацию
         data_to_save = completion.choices[0].message.parsed
-        save_qualification(data_to_save)  # Сохраняем квалификацию в стейте
+        data_to_save = base_data + data_to_save
+
+        save_data(data_to_save) # Сохраняем квалификацию в стейте
         return data_to_save
 
     except Exception as e:
         print(e)
 
 
-def save_qualification(data_to_save):
-    pass
-
 
 if __name__ == "__main__":
     data_to_gpt = """
     ID: 2317220161, Наименование: КРАСКА ДЕКОРАТИВНАЯ ПОД ДЕРЕВО, Маркировка: KAOWA SEMENTOL, Регламенты (ГОСТ/ТУ): Неизвестно, Параметры: 750МЛ ОРЕХ, OKPD2_NAME: Материалы лакокрасочные для нанесения покрытий прочие, ГОСТ Название: Неизвестно
     """
+
 
     x = structured_output_agent(data_to_gpt)
 

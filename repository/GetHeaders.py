@@ -3,7 +3,7 @@ import json
 
 
 def get_headers_from_excel():
-    file_path = 'main_data_with_analysis.xlsx'
+    file_path = 'C:/Hackaton_October/neclassic/main_data_with_analysis.xlsx'
 
     workbook = openpyxl.load_workbook(file_path)
 

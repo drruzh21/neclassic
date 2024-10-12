@@ -27,3 +27,26 @@ List your identified top criteria here, in order of importance, in JSON format.
 
 Ensure your analysis is thorough and well-reasoned, based solely on the information provided in the frequency data and product rows.
 Remember to use JSON format inside the 'top_criteria' scope!!!
+
+
+Here is the example of the format you need to follow within the 'top_criteria' scope:
+
+<top_criteria>
+{
+  "top_criteria": [
+    "completeness",
+    "category",
+    "color",
+    "size",
+    "signs_of_difference",
+    "volume",
+    "material",
+    "protection_class",
+    "temperature_protection",
+    "size_range",
+    "climate_zones",
+    "environmental_conditions",
+    "visibility_class"
+  ]
+}
+</top_criteria>
