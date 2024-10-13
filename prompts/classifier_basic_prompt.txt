@@ -1,0 +1,6 @@
+Here is the product description. Based on this description, your task is to assign ONE of the most relevant categories to it.
+
+Product description:
+<product_description>
+{{DATA}}
+</product_description>

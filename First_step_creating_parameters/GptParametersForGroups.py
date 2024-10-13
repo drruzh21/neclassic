@@ -106,7 +106,6 @@ class GptCombinedProcessor:
             print("Все словари успешно обработаны и сохранены.")
 
         except Exception as e:
-            workbook.save(self.excel_filename)
             print("Произошла ошибка при обработке словарей:", e)
 
     @staticmethod

@@ -93,7 +93,7 @@ class ExcelSheetManager:
 # Пример использования
 if __name__ == "__main__":
     # Укажите имя вашего файла Excel
-    filename = 'main_data.xlsx'
+    filename = 'main_data_with_analysis.xlsx'
 
     # Создаем объект класса
     manager = ExcelSheetManager(filename)

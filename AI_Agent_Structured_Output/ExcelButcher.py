@@ -44,7 +44,7 @@ class ExcelBatchProcessor:
     Использует композицию с классом ExcelSheetManager для управления листами Excel-файла.
     """
 
-    def __init__(self, filename: str, batch_size: int = 20):
+    def __init__(self, filename: str, batch_size: int = 10):
         """
         Инициализирует ExcelBatchProcessor.
 
@@ -183,10 +183,10 @@ class ExcelBatchProcessor:
 
 if __name__ == "__main__":
     # Укажите путь к вашему файлу Excel
-    filename = 'C:/Hackaton_October/neclassic/main_data_with_analysis.xlsx'
+    filename = 'C:/Hackaton_October/neclassic/First_step_creating_parameters/main_data_with_analysis.xlsx'
 
-    # Создаем объект класса ExcelBatchProcessor с размером батча 20
-    processor = ExcelBatchProcessor(filename=filename, batch_size=20)
+    # Создаем объект класса ExcelBatchProcessor с размером батча 10
+    processor = ExcelBatchProcessor(filename=filename, batch_size=2)
 
     # Собираем все батчи из Excel
     all_batches = processor.collect_batches()

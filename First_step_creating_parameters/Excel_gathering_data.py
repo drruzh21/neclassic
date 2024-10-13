@@ -187,7 +187,7 @@ class ExcelGatherDataOptimized:
 # Пример использования
 if __name__ == "__main__":
     db_path = r"C:\Hackaton_October\neclassic\main_data.accdb"
-    excel_filename = 'main_data.xlsx'
+    excel_filename = 'main_data_with_analysis.xlsx'
 
     # Создаем объект класса ExcelGatherDataOptimized
     db_handler = ExcelGatherDataOptimized(db_path, excel_filename)
